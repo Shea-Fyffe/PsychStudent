@@ -134,6 +134,27 @@ clean_text <- function(x, lowercase = TRUE, rm_nums = TRUE, convert_nums = FALSE
   stopifnot({
     sapply(c(lowercase, rm_nums, convert_nums, rm_punct, rm_whitespace), is.logical)
   })
+  mispell_dict  <- function() {
+    return(list("colour" = "color",
+                "centre" = "center",
+                "didnt" = "did not",
+                "doesnt" = "does not",
+                "isnt" = "is not",
+                "shouldnt" = "should not",
+                "favourite" = "favorite",
+                "travelling" = "traveling",
+                "counselling" = "counseling",
+                "theatre" = "theater",
+                "cancelled" = "canceled",
+                "labour" = "labor",
+                "organisation" = "organization",
+                "wwii" = "world war 2",
+                "citicise" = "criticize",
+                "instagram" =  "social medium",
+                "whatsapp" =  "social medium",
+                "snapchat" =  "social medium"))
+    
+  }
   if (typeof(x) != "character") {
     stop("Please define x as a character")
   }
@@ -415,27 +436,6 @@ tokenize_docs <- function(x, sep = NULL, strip = TRUE, simplify = TRUE, lower_ca
   names(.x) <- doc_id
   return(.x)
 }
-mispell_dict  <- function() {
-  return(list("colour" = "color",
-                      "centre" = "center",
-                      "didnt" = "did not",
-                      "doesnt" = "does not",
-                      "isnt" = "is not",
-                      "shouldnt" = "should not",
-                      "favourite" = "favorite",
-                      "travelling" = "traveling",
-                      "counselling" = "counseling",
-                      "theatre" = "theater",
-                      "cancelled" = "canceled",
-                      "labour" = "labor",
-                      "organisation" = "organization",
-                      "wwii" = "world war 2",
-                      "citicise" = "criticize",
-                      "instagram" =  "social medium",
-                      "whatsapp" =  "social medium",
-                      "snapchat" =  "social medium"))
-
-    }
 normalize_sentences <- function(txt, sent_chars = c(".", "?", "!"), normalize_to = ".") {
   .sent_str <- paste0("[", paste0(sent_chars, collapse = ""), "]")
   if(!any(grepl(.sent_str, txt))) {
