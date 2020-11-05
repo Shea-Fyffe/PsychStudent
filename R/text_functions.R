@@ -436,7 +436,7 @@ tokenize_docs <- function(x, sep = NULL, strip = TRUE, simplify = TRUE, lower_ca
   names(.x) <- doc_id
   return(.x)
 }
-normalize_sentences <- function(txt, sent_chars = c(".", "?", "!"), normalize_to = ".") {
+normalize_sentences <- function(txt, sent_chars = c(".", "?", "!"), normalize_to = ".", ...) {
   .sent_str <- paste0("[", paste0(sent_chars, collapse = ""), "]")
   if(!any(grepl(.sent_str, txt))) {
     warning("no sentence ending characters found")
@@ -448,6 +448,6 @@ normalize_sentences <- function(txt, sent_chars = c(".", "?", "!"), normalize_to
   }
     txt <- gsub(paste0('(?<=', .sent_str, ')(?=[\\w{1}])'), "", txt, perl = T)
     txt <- gsub(paste0('([', .sent_str,']+)'), normalize_to, txt, perl = T)
-    txt <- clean_text(txt, filter_punct = normalize_to)
+    txt <- clean_text(txt, filter_punct = normalize_to, ...)
   return(txt)
 }
