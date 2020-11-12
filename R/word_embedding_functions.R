@@ -7,6 +7,19 @@ create_lsa_embedding <- function(text, topics = 5L, ...) {
   .doc_emb <- text2vec::fit_transform(.doc_emb, .lsa)
   return(.doc_emb)
 }
+#' Title
+#'
+#' @param text 
+#' @param skip_win 
+#' @param co_occur_max 
+#' @param word_vec_len 
+#' @param convrgnce_tol 
+#' @param ... 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 create_gloVe_embeddings <- function(text, skip_win = 5L, co_occur_max = 100L, word_vec_len = 50L, convrgnce_tol = 0.01, ...){
   .x <- create_lexicon(text, ...)
   .dtm <-  text2vec::create_tcm(.x[[1]], .x[[2]], skip_win)
