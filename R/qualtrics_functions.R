@@ -226,6 +226,35 @@ build_qualtrics_matrix <- function(choices, mat_ids = NULL, stem = NULL,
 }
 #' Title
 #'
+#' @param ... 
+#' @param template 
+#' @param spots 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+build_policy_capture <- function(..., template, spots = 5L) {
+  stopifnot({
+    is.character(template)
+    is.numeric(spots)
+  })
+  .check_base <- sum(gregexpr("[%]+", template) > 0)
+  if(.check_base != spots) {
+    stop("base needs to be an appropriate string to hold variables see '?sprintf' fmt argument")
+  }
+  .times <- vector("list", spots)
+  for (i in seq_along(.times)) {
+    .times[[i]] <- c(...)
+  }
+  .times <- expand.grid(.times, stringsAsFactors = F)
+  .out <- apply(.times, MARGIN = 1, function(x) {
+    x <- do.call(sprintf, c(fmt = template, as.list(paste0(x))))
+  })
+  return(.out)
+}
+#' @title Package text blocks into Qualtrics survey
+#'
 #' @param blocks 
 #' @param out_dir 
 #' @param ... 
