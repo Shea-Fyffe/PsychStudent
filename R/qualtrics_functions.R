@@ -224,33 +224,43 @@ build_qualtrics_matrix <- function(choices, mat_ids = NULL, stem = NULL,
   
   return(.item)
 }
-#' Title
+#' @title Enumerate Policy Capturing Items for Qualtrics
 #'
-#' @param ... 
-#' @param template 
-#' @param spots 
+#' @param template Required. An item template that will be passed to \code{\link[base]{sprintf}} 
+#' @param ... Required. A list of variables to enumerate.
+#'
 #'
 #' @return
 #' @export
 #'
 #' @examples
-build_policy_capture <- function(..., template, spots = 5L) {
+#' \dontrun{
+#'  # make a template
+#'  temp <- "Compensation: %s
+#'     Promotion: %s
+#'     Layoff Policy: %s
+#'     Environmental Score: %s"
+#'     
+#'  variables <- list(c(50000, 60000, 70000), 
+#'                    c("High", "Average", "Low"), 
+#'                    c("Seniority", "Performance"),
+#'                    seq(5))
+#'  pols <- build_policy_capture(temp, variables)
+#' }
+build_policy_capture <- function(template, ...) {
   stopifnot({
     is.character(template)
-    is.numeric(spots)
   })
-  .check_base <- sum(gregexpr("[%]+", template) > 0)
-  if(.check_base != spots) {
+  .vars <- eval(...)
+  if(is.atomic(.vars)) {
+    .vars <- list(.vars)
+  }
+  .check_base <- length(gregexpr("[%]+", template)[[1L]])
+  if(.check_base != length(.vars)) {
     stop("base needs to be an appropriate string to hold variables see '?sprintf' fmt argument")
   }
-  .times <- vector("list", spots)
-  for (i in seq_along(.times)) {
-    .times[[i]] <- c(...)
-  }
-  .times <- expand.grid(.times, stringsAsFactors = F)
-  .out <- apply(.times, MARGIN = 1, function(x) {
-    x <- do.call(sprintf, c(fmt = template, as.list(paste0(x))))
-  })
+  .vars <- expand.grid(.vars, stringsAsFactors = F)
+  .out <- do.call(sprintf, c(fmt = template, .vars))
   return(.out)
 }
 #' @title Package text blocks into Qualtrics survey
