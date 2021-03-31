@@ -59,9 +59,10 @@ recode_variables <- function(x, vars, old_values = NULL, new_values = NULL) {
 #' @param x Required. Data.frame containing variables create subscale
 #' @param FUNCT Required. A function to be applied
 #' @param pattern Optional. Pattern of variable names select for subscale
+#' #' @param ... Optional. Additional arguments to pass to \code{FUNCT}
 #'  calculation. May use Regex.
 #' @family SPSS
-create_subscale <- function(x, FUNCT, pattern = NULL) {
+create_subscale <- function(x, FUNCT, pattern = NULL, ...) {
   if (!inherits(x, "data.frame")) {
     stop("x must be a data.frame")
   }
@@ -71,7 +72,7 @@ create_subscale <- function(x, FUNCT, pattern = NULL) {
       }
       x <- x[grep(pattern, names(x))]
     }
-  x <- apply(x, 1, FUN = FUNCT)
+  x <- apply(x, 1, FUN = FUNCT, ...)
   return(x)
 }
 #' @title Identify all variables in a dataframe given a pattern
