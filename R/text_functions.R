@@ -14,9 +14,13 @@
 #' @import pdftools readr
 #' @export
 get_pdf_text <- function(.dir = getwd(), clean = TRUE, ...) {
-  .paths <- tryCatch(list.files(.dir, pattern = "\\.pdf$"), error = function(err) {
-    NA
-  })
+  .paths <-
+    tryCatch(
+      list.files(.dir, pattern = "\\.pdf$"),
+      error = function(err) {
+        NA
+      }
+    )
   if (!length(.paths) || is.na(.paths)) {
     stop(sprintf("No valid PDF files found in %s", dir))
   }
@@ -42,22 +46,28 @@ get_pdf_text <- function(.dir = getwd(), clean = TRUE, ...) {
 #' @seealso [wordnet::setDict()]
 #' @import reshape2 wordnet
 #' @export
-synonym_match <- function(x, POS = "ADJECTIVE", dictionary = "C:\\Program Files (x86)\\WordNet\\2.1",
-                          drop = TRUE) {
-  .home <- gsub("*\\\\dict", "", dictionary)
-  Sys.setenv(WNHOME = .home)
-  wordnet::setDict(dictionary)
-  .syn <- sapply(x, function(x) wordnet::synonyms(word = x, pos = POS))
-  .syn <- reshape2::melt(.syn, factorsAsStrings = FALSE)
-  names(.syn) <- c("Synonym", "Word")
-  .syn[, 1] <- gsub("*\\([^\\)]+\\)$", "", as.character(.syn[, 1]))
-  .syn[, "match"] <- ifelse(.syn[, 1] != .syn[, 2], T, F)
-  .syn <- .syn[.syn[, "match"], ]
-  if (drop) {
-    .syn <- .syn[vec_grep(.syn[, 2], .syn[, 1], FALSE), ]
+synonym_match <-
+  function(x,
+           POS = "ADJECTIVE",
+           dictionary = "C:\\Program Files (x86)\\WordNet\\2.1",
+           drop = TRUE) {
+    .home <- gsub("*\\\\dict", "", dictionary)
+    Sys.setenv(WNHOME = .home)
+    wordnet::setDict(dictionary)
+    .syn <-
+      sapply(x, function(x) {
+        wordnet::synonyms(word = x, pos = POS)
+      })
+    .syn <- reshape2::melt(.syn, factorsAsStrings = FALSE)
+    names(.syn) <- c("Synonym", "Word")
+    .syn[, 1] <- gsub("*\\([^\\)]+\\)$", "", as.character(.syn[, 1]))
+    .syn[, "match"] <- ifelse(.syn[, 1] != .syn[, 2], T, F)
+    .syn <- .syn[.syn[, "match"], ]
+    if (drop) {
+      .syn <- .syn[vec_grep(.syn[, 2], .syn[, 1], FALSE), ]
+    }
+    .syn
   }
-  .syn
-}
 #' @title Count common words between two vectors
 #' @author Shea Fyffe, \email{shea.fyffe@@gmail.com}
 #' @param x character vector of words or sentences.
@@ -66,32 +76,39 @@ synonym_match <- function(x, POS = "ADJECTIVE", dictionary = "C:\\Program Files 
 #' @param stem Logical. Stem words? Uses [textstem::stem_word]
 #' @import tm textstem
 #' @export
-count_common_words <- function(x, y, stopwords = TRUE, stem = FALSE) {
-  stopifnot(is.character(x), is.character(y))
-  if (stopwords) {
-    x <- .rm_stopwords(x)
-    y <- .rm_stopwords(y)
-  }
-  if (stem) {
-    x <- textstem::stem_words(x, "en")
-    y <- textstem::stem_words(y, "en")
-  }
-  l <- sapply(list(unique(x), unique(y)), clean_text)
-  l <- sapply(l, function(x) strsplit(x, split = " "))
-  res <- sapply(l[[1]], function(x) {
-    res <- sapply(l[[2]], function(y) {
-      n <- .count_words(x, y)
-      n
+count_common_words <-
+  function(x,
+           y,
+           stopwords = TRUE,
+           stem = FALSE) {
+    stopifnot(is.character(x), is.character(y))
+    if (stopwords) {
+      x <- .rm_stopwords(x)
+      y <- .rm_stopwords(y)
+    }
+    if (stem) {
+      x <- textstem::stem_words(x, "en")
+      y <- textstem::stem_words(y, "en")
+    }
+    l <- sapply(list(unique(x), unique(y)), clean_text)
+    l <- sapply(l, function(x) {
+      strsplit(x, split = " ")
     })
-  })
+    res <- sapply(l[[1]], function(x) {
+      res <- sapply(l[[2]], function(y) {
+        n <- .count_words(x, y)
+        n
+      })
+    })
 
-  res <- as.data.frame(res)
-  names(res) <- l[[1]]
-  res[, "doc_y"] <- l[[2]]
-  res <- tidyr::gather_(res, "doc_x", "common_word_count", names(res)[names(res) !=
-    "doc_y"], na.rm = T)
-  return(res)
-}
+    res <- as.data.frame(res)
+    names(res) <- l[[1]]
+    res[, "doc_y"] <- l[[2]]
+    res <-
+      tidyr::gather_(res, "doc_x", "common_word_count", names(res)[names(res) !=
+        "doc_y"], na.rm = T)
+    return(res)
+  }
 #' @title Count words Helper
 #' @export
 .count_words <- function(x, y) {
@@ -129,79 +146,132 @@ wrap_text <- function(txt, pattern) {
 #' @param convert_contract Logical. Convert contractions to base words?
 #' @import qdap
 #' @export
-clean_text <- function(x, lowercase = TRUE, rm_nums = TRUE, convert_nums = FALSE, convert_contract = TRUE, rm_punct = TRUE,
-                       rm_whitespace = TRUE, filter_punct = list()) {
-  stopifnot({
-    sapply(c(lowercase, rm_nums, convert_nums, rm_punct, rm_whitespace), is.logical)
-  })
-  if (typeof(x) != "character") {
-    stop("Please define x as a character")
-  }
-
-  if (any(grepl("I_WAS_NOT_ASCII", iconv(x, "latin1", "ASCII",
-    sub = "I_WAS_NOT_ASCII"
-  )))) {
-    x <- gsub("^(\\s*<U\\+\\w+>\\s*)+.*$", "encoding error", x)
-    x <- stringi::stri_trans_general(x, "latin-ascii")
-  }
-
-  if (convert_nums) {
-    if (any(grepl("[[:digit:]]", x))) {
-      x <- qdap::replace_number(x)
-      x <- qdap::replace_ordinal(x)
+clean_text <-
+  function(x,
+           lowercase = TRUE,
+           rm_nums = TRUE,
+           convert_nums = FALSE,
+           convert_contract = TRUE,
+           rm_punct = TRUE,
+           rm_whitespace = TRUE,
+           filter_punct = list()) {
+    stopifnot({
+      sapply(
+        c(lowercase, rm_nums, convert_nums, rm_punct, rm_whitespace),
+        is.logical
+      )
+    })
+    mispell_dict <- function() {
+      return(
+        list(
+          "colour" = "color",
+          "centre" = "center",
+          "didnt" = "did not",
+          "doesnt" = "does not",
+          "isnt" = "is not",
+          "shouldnt" = "should not",
+          "favourite" = "favorite",
+          "travelling" = "traveling",
+          "counselling" = "counseling",
+          "theatre" = "theater",
+          "cancelled" = "canceled",
+          "labour" = "labor",
+          "organisation" = "organization",
+          "wwii" = "world war 2",
+          "citicise" = "criticize",
+          "instagram" =  "social medium",
+          "whatsapp" =  "social medium",
+          "snapchat" =  "social medium"
+        )
+      )
     }
-  } else if (rm_nums) {
-    x <- gsub("[[:digit:]]", " ", x)
-  }
+    if (typeof(x) != "character") {
+      stop("Please define x as a character")
+    }
 
-  if (convert_contract) {
-    x <- qdap::replace_contraction(x)
-    if(any(grepl("['][A-z]", x))) {
-      .pat <- c("n't\\b","'re\\b","'d\\b",
-                "'ll\\b","'t\\b","'ve\\b","'m\\b")
-      .expand <- c(" not", " are", " would",
-                   " will", " not", " have", " am")
-      for(i in seq_along(.pat)) {
-        x <- gsub(.pat[i], .expand[i], x)
+    if (any(grepl(
+      "I_WAS_NOT_ASCII",
+      iconv(x, "latin1", "ASCII",
+        sub = "I_WAS_NOT_ASCII"
+      )
+    ))) {
+      x <- gsub("^(\\s*<U\\+\\w+>\\s*)+.*$", "encoding error", x)
+      x <- stringi::stri_trans_general(x, "latin-ascii")
+    }
+
+    if (convert_nums) {
+      if (any(grepl("[[:digit:]]", x))) {
+        x <- qdap::replace_number(x)
+        x <- qdap::replace_ordinal(x)
       }
-
+    } else if (rm_nums) {
+      x <- gsub("[[:digit:]]", " ", x)
     }
-  }
 
-  if (rm_punct) {
-    if (length(filter_punct) == 0L) {
-      .pat <- "[^[:alnum:]\\s]"
-    } else {
-      .pat <- paste0("[^[:alnum:]\\s", paste0(unlist(filter_punct), collapse = "") ,"]")
+    if (convert_contract) {
+      x <- qdap::replace_contraction(x)
+      if (any(grepl("['][A-z]", x))) {
+        .pat <- c(
+          "n't\\b",
+          "'re\\b",
+          "'d\\b",
+          "'ll\\b",
+          "'t\\b",
+          "'ve\\b",
+          "'m\\b"
+        )
+        .expand <- c(
+          " not", " are", " would",
+          " will", " not", " have", " am"
+        )
+        for (i in seq_along(.pat)) {
+          x <- gsub(.pat[i], .expand[i], x)
+        }
+      }
     }
-    x <- gsub(.pat, " ", x)
-  }
 
-  if (any(grepl("^\\s*$", x))) {
-    x[grep("^\\s*$", x)] <- "NA"
-  }
+    if (rm_punct) {
+      if (length(filter_punct) == 0L) {
+        .pat <- "[^[:alnum:]\\s]"
+      } else {
+        .pat <-
+          paste0("[^[:alnum:]\\s", paste0(unlist(filter_punct), collapse = ""), "]")
+      }
+      x <- gsub(.pat, " ", x)
+    }
 
-  if (rm_whitespace) {
-    x <- gsub("\\s+", " ", x)
-    x <- gsub("^\\s+|\\s+$", "", x)
-    x <- x[x != ""]
-  }
+    if (any(grepl("^\\s*$", x))) {
+      x[grep("^\\s*$", x)] <- "NA"
+    }
 
-  if (lowercase) {
-    x <- tolower(x)
-  }
+    if (rm_whitespace) {
+      x <- gsub("\\s+", " ", x)
+      x <- gsub("^\\s+|\\s+$", "", x)
+      x <- x[x != ""]
+    }
 
-  return(x)
-}
+    if (lowercase) {
+      x <- tolower(x)
+    }
+
+    return(x)
+  }
 #' @title Capture text between two characters
 #' @author Shea Fyffe, \email{shea.fyffe@@gmail.com}
 #' @param x character vector of words or sentences.
 #' @param between character vector of length 2 containing boundary characters
-extract_text_between <- function(x, between = c(".*", ".*"), ...) {
-  .pattern <- sprintf("%s(.*?)%s", between[1], between[2])
-  .x <- regmatches(x, regexec(.pattern, x, ...))
-  return(.x)
-}
+extract_text_between <-
+  function(x,
+           between = c(".*", ".*"),
+           simplify = TRUE,
+           ...) {
+    .pattern <- paste0("(?<=", between[1], ").*?(?=", between[2], ")")
+    .x <- regmatches(x, gregexpr(.pattern, x, perl = TRUE, ...))
+    if (simplify) {
+      .x <- unlist(.x)
+    }
+    return(.x)
+  }
 #' @title Parse PDF article
 #' @author Shea Fyffe, \email{shea.fyffe@@gmail.com}
 #' @param pdf_path file path to article as a pdf
@@ -241,7 +311,10 @@ parse_pdf <- function(pdf_path) {
 #' @param ... Additional arguments to be passed to [qdap::freq_terms]
 #' @return
 #' @export
-find_top_words <- function(x, stopwords = TRUE, stem = FALSE, ...) {
+find_top_words <- function(x,
+                           stopwords = TRUE,
+                           stem = FALSE,
+                           ...) {
   if (stopwords) {
     x <- .rm_stopwords(x)
   }
@@ -251,7 +324,13 @@ find_top_words <- function(x, stopwords = TRUE, stem = FALSE, ...) {
   if (length(list(...)) != 0L) {
     x <- qdap::freq_terms(text.var = x, ...)
   } else {
-    x <- qdap::freq_terms(text.var = x, 20, at.least = 3, stopwords = qdapDictionaries::Top200Words)
+    x <-
+      qdap::freq_terms(
+        text.var = x,
+        20,
+        at.least = 3,
+        stopwords = qdapDictionaries::Top200Words
+      )
   }
   return(x)
 }
@@ -298,8 +377,10 @@ check_spelling <- function(x, return_misspell = TRUE, ...) {
 #' @export
 .rm_stopwords <- function(x) {
   sw <- paste(tm::stopwords("en"), collapse = "\\b|\\b")
-  sw <- paste0("\\b", sw, "\\b")
   x <- gsub(sw, "", x)
+  x <- gsub("\\s+", " ", x)
+  x <- gsub("^\\s+|\\s+$", "", x)
+  x <- x[x != ""]
   return(x)
 }
 #' @title Count words in vector of strings
@@ -310,7 +391,9 @@ count_string_words <- function(x) {
   if (!is.character(x)) {
     stop("x not a character vector")
   }
-  x <- sapply(gregexpr("[[:alpha:]]+", x), function(x) sum(x > 0))
+  x <- sapply(gregexpr("[[:alpha:]]+", x), function(x) {
+    sum(x > 0)
+  })
   return(x)
 }
 #' @title Find rows in data.frame columns with certain words
@@ -321,7 +404,10 @@ count_string_words <- function(x) {
 #' should be treated
 #' @return logical vector with \code{length} equal to \code{nrow(data)}
 #' @export
-has_words <- function(..., data, partial = FALSE, type = "and") {
+has_words <- function(...,
+                      data,
+                      partial = FALSE,
+                      type = "and") {
   stopifnot({
     inherits(data, "data.frame")
     is.logical(partial)
@@ -364,90 +450,102 @@ has_words <- function(..., data, partial = FALSE, type = "and") {
   } else {
     stop("type must be one of the follower: 'and' 'or'")
   }
-
-
   return(.out)
 }
-find_replace_words <- function(docs, find_wrds, replace_wrds, SIMPLIFY = TRUE, ...) {
-  if (length(find_wrds) != length(replace_wrds) || 
+find_replace_words <-
+  function(docs,
+           find_wrds,
+           replace_wrds,
+           fixed = TRUE,
+           ignore.case = TRUE) {
+    if (length(find_wrds) != length(replace_wrds) ||
       any(vapply(list(find_wrds, replace_wrds), is.recursive, FUN.VALUE = logical(1)))) {
-    stop("find_wrds and replace_wrds atomic vectors of the same length.")
-  }
-  docs <- tokenize_docs(docs, simplify = SIMPLIFY, ...)
-  .findx <- match(docs, find_wrds)
-  .findx_na <- is.na(.findx)
-  docs[!.findx_na] <- replace_wrds[.findx[!.findx_na]]
-  if (SIMPLIFY) {
-    return(docs)
-  }
-  if (!anyDuplicated(names(docs))) {
-    return(docs)
-  } else {
-    docs <- split(docs, names(docs))
-    docs <- sapply(docs, paste0, collapse = " ")
-    return(docs)
-  }
-}
-tokenize_docs <- function(x, sep = NULL, strip = TRUE, simplify = TRUE, lower_case = TRUE) {
-  stopifnot({
-    is.null(sep) || length(sep) == 1L
-    is.character(x) && length(x) != 0L
-  })
-  doc_id <- seq_along(x)
-  if(lower_case){
-    x <- tolower(x)
-  }
-  if (is.null(sep)) {
-    .x <- stringi::stri_split_boundaries(x, type = "word",
-                                         skip_word_none = strip)
-  } else if (nchar(sep) == 1L) {
-    .x <- stringi::stri_split_fixed(x, pattern = sep, omit_empty = strip)
-  } else {
-    .x <- stringi::stri_split_regex(x, pattern = sep, omit_empty = strip)
-  }
-  .x <- lapply(.x, trimws)
-  if(simplify) {
-    doc_id <- rep(doc_id, sapply(.x, length))
-    .x <- unlist(.x)
-  } else {
-    .x <- .x[sapply(.x, function(x) length(x) != 0)]
-  }
-  names(.x) <- doc_id
-  return(.x)
-}
-mispell_dict  <- function() {
-  return(list("colour" = "color",
-                      "centre" = "center",
-                      "didnt" = "did not",
-                      "doesnt" = "does not",
-                      "isnt" = "is not",
-                      "shouldnt" = "should not",
-                      "favourite" = "favorite",
-                      "travelling" = "traveling",
-                      "counselling" = "counseling",
-                      "theatre" = "theater",
-                      "cancelled" = "canceled",
-                      "labour" = "labor",
-                      "organisation" = "organization",
-                      "wwii" = "world war 2",
-                      "citicise" = "criticize",
-                      "instagram" =  "social medium",
-                      "whatsapp" =  "social medium",
-                      "snapchat" =  "social medium"))
-
+      stop("find_wrds and replace_wrds atomic vectors of the same length.")
     }
-normalize_sentences <- function(txt, sent_chars = c(".", "?", "!"), normalize_to = ".") {
-  .sent_str <- paste0("[", paste0(sent_chars, collapse = ""), "]")
-  if(!any(grepl(.sent_str, txt))) {
-    warning("no sentence ending characters found")
-    return(logical(0))
-  } else {
-    txt <- gsub(paste0('(?<=', .sent_str, ')(?=[\\w{2,}])'), " ", txt, perl = T)
-    txt <- gsub(paste0('(', .sent_str,')\\s+'), "\\1 ", txt, perl = T)
-    txt <- gsub(paste0('\\s+(?=', .sent_str,')|(?<=', .sent_str,')\\s+$'), "", txt, perl = T)
+    if (!is.character(docs)) {
+      stop("docs must be a vector of strings returning TRUE for is.character()")
+    }
+    if (ignore.case) {
+      find_wrds <- tolower(find_wrds)
+      docs <- tolower(docs)
+    }
+    if (fixed) {
+      find_wrds <- paste0("\\b", find_wrds, "\\b")
+    }
+    names(replace_wrds) <- find_wrds
+    .res <- stringr::str_replace_all(docs, pattern = replace_wrds)
+    return(.res)
   }
-    txt <- gsub(paste0('(?<=', .sent_str, ')(?=[\\w{1}])'), "", txt, perl = T)
-    txt <- gsub(paste0('([', .sent_str,']+)'), normalize_to, txt, perl = T)
-    txt <- clean_text(txt, filter_punct = normalize_to)
-  return(txt)
-}
+
+tokenize_docs <-
+  function(x,
+           sep = NULL,
+           fixed = TRUE,
+           strip = TRUE,
+           simplify = FALSE,
+           lower_case = FALSE) {
+    stopifnot({
+      is.null(sep) || length(sep) == 1L
+      is.character(x) && length(x) != 0L
+    })
+    doc_id <- seq_along(x)
+    if (lower_case) {
+      x <- tolower(x)
+      sep <- tolower(sep)
+    }
+    if (is.null(sep)) {
+      .x <- stringi::stri_split_boundaries(x,
+        type = "word",
+        skip_word_none = strip
+      )
+    } 
+    if (fixed) {
+      .x <-
+        stringi::stri_split_fixed(x, pattern = sep, omit_empty = strip)
+    } else {
+      .x <-
+        stringi::stri_split_regex(x, pattern = sep, omit_empty = strip)
+    }
+    .x <- lapply(.x, trimws)
+    if (simplify) {
+      doc_id <- rep(doc_id, sapply(.x, length))
+      .x <- unlist(.x)
+    } else {
+      .x <- .x[sapply(.x, function(x) {
+        length(x) != 0
+      })]
+    }
+    names(.x) <- doc_id
+    return(.x)
+  }
+normalize_sentences <-
+  function(txt,
+           sent_chars = c(".", "?", "!"),
+           normalize_to = "[SEP]", clean = FALSE,
+           ...) {
+    .sent_str <- paste0("[", paste0(sent_chars, collapse = ""), "]")
+    if (!any(grepl(.sent_str, txt))) {
+      warning("no sentence ending characters found")
+      return(logical(0))
+    } else {
+      txt <- gsub(paste0("(", .sent_str,")\\1+"), 
+           "\\1", txt)
+      txt <-
+        gsub(paste0("(?<=", .sent_str, ")(?=[\\w{2,}])"), " ", txt, perl = T)
+      txt <-
+        gsub(paste0("(", .sent_str, ")\\s+"), "\\1 ", txt, perl = T)
+      txt <-
+        gsub(paste0("\\s+(?=", .sent_str, ")|(?<=", .sent_str, ")\\s+$"),
+          "",
+          txt,
+          perl = T
+        )
+    }
+    txt <-
+      gsub(paste0("(?<=", .sent_str, ")(?=[\\w{1}])"), "", txt, perl = T)
+    txt <- stringr::str_replace_all(txt, .sent_str, normalize_to)
+    if (clean) {
+      txt <- clean_text(txt, filter_punct = normalize_to, ...)
+    }
+    return(txt)
+  }

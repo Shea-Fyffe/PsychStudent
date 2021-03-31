@@ -25,6 +25,15 @@ get_variables <- function(x, pattern) {
     x <- x[grepl(names(x), pattern = pattern)]
     x
 }
+#' Title
+#'
+#' @param n_items 
+#' @param time_points 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 calc_df <- function(n_items, time_points) {
     if (!is.numeric(n_items) || !is.numeric(time_points)) {
         stop("Verify items and time points are numeric")
@@ -37,6 +46,7 @@ calc_df <- function(n_items, time_points) {
     p <- p/2
     return(p)
 }
+
 make_labels <- function(n_items, time_points) {
     if (!is.numeric(n_items) || !is.numeric(time_points)) {
         stop("Verify items and time points are numeric")

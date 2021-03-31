@@ -224,7 +224,46 @@ build_qualtrics_matrix <- function(choices, mat_ids = NULL, stem = NULL,
   
   return(.item)
 }
-#' Title
+#' @title Enumerate Policy Capturing Items for Qualtrics
+#'
+#' @param template Required. An item template that will be passed to \code{\link[base]{sprintf}} 
+#' @param ... Required. A list of variables to enumerate.
+#'
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'  # make a template
+#'  temp <- "Compensation: %s
+#'     Promotion: %s
+#'     Layoff Policy: %s
+#'     Environmental Score: %s"
+#'     
+#'  variables <- list(c(50000, 60000, 70000), 
+#'                    c("High", "Average", "Low"), 
+#'                    c("Seniority", "Performance"),
+#'                    seq(5))
+#'  pols <- build_policy_capture(temp, variables)
+#' }
+build_policy_capture <- function(template, ...) {
+  stopifnot({
+    is.character(template)
+  })
+  .vars <- eval(...)
+  if(is.atomic(.vars)) {
+    .vars <- list(.vars)
+  }
+  .check_base <- length(gregexpr("[%]+", template)[[1L]])
+  if(.check_base != length(.vars)) {
+    stop("base needs to be an appropriate string to hold variables see '?sprintf' fmt argument")
+  }
+  .vars <- expand.grid(.vars, stringsAsFactors = F)
+  .out <- do.call(sprintf, c(fmt = template, .vars))
+  return(.out)
+}
+#' @title Package text blocks into Qualtrics survey
 #'
 #' @param blocks 
 #' @param out_dir 

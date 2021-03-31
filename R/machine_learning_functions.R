@@ -117,8 +117,6 @@ create_doc_vectors <-
     
     return(.res)
   }
-
-
 plot_rstne <- function(mat, group, labs = NULL, plot = FALSE, ...) {
   if(is.character(group)) {
     group <- as.factor(group)
