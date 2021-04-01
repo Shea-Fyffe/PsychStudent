@@ -1,6 +1,6 @@
 #' @title Convert PDF File to Text
 #' @author Shea Fyffe, \email{shea.fyffe@@gmail.com}
-#' @param .dir file directory of pdf(s)
+#' @param path file path to pdf or file directory of pdf(s)
 #' @param ... a character vector to filter out PDF file names
 #' @examples
 #' \dontrun{
@@ -13,25 +13,31 @@
 #' }
 #' @import pdftools readr
 #' @export
-get_pdf_text <- function(.dir = getwd(), clean = TRUE, ...) {
-  .paths <-
+get_pdf_text <- function(path = getwd(), clean = TRUE, ...) {
+  stopifnot({
+    is.character(path)
+    is.logical(clean)
+  })
+  if(!grepl("\\.pdf$", path)) {
+  .path <-
     tryCatch(
-      list.files(.dir, pattern = "\\.pdf$"),
+      list.files(path, pattern = "\\.pdf$"),
       error = function(err) {
         NA
       }
     )
-  if (!length(.paths) || is.na(.paths)) {
+  if (!length(.path) || is.na(.path)) {
     stop(sprintf("No valid PDF files found in %s", dir))
-  }
+   }
   .fuzzy <- list(...)
   if (!!length(.fuzzy)) {
     .fuzzy <- paste(.fuzzy, collapse = "|")
-    if (any(grepl(.fuzzy, x = .paths, ignore.case = TRUE))) {
-      .paths <- .paths[grepl(.fuzzy, x = .paths, ignore.case = TRUE)]
+    if (any(grepl(.fuzzy, x = .path, ignore.case = TRUE))) {
+      .path <- .path[grepl(.fuzzy, x = .path, ignore.case = TRUE)]
     }
+   }
   }
-  .pdfs <- lapply(.paths, pdftools::pdf_text)
+  .pdfs <- lapply(.path, pdftools::pdf_text)
   if (clean) {
     .pdfs <- lapply(.pdfs, clean_pdf)
   }
@@ -452,6 +458,7 @@ has_words <- function(...,
   }
   return(.out)
 }
+
 find_replace_words <-
   function(docs,
            find_wrds,
