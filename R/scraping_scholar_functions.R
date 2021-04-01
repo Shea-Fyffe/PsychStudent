@@ -34,7 +34,7 @@
 #' }
 #' @export
 #' TODO(clean up arguments passed to ...)
-scrape_scholar <- function(...) {
+scrape_scholar <- function(..., base_wait = 10, user_agent = NULL, verbose = FALSE) {
   .tmp <- paste(c(...))
   if (any(sapply(.tmp, function(x)
     grepl("^https://", x)))) {
@@ -44,7 +44,7 @@ scrape_scholar <- function(...) {
   }
   .out <- list()
   for (i in seq_along(.url)) {
-    .out[[i]] <- try(scrape(.url[i]))
+    .out[[i]] <- try(scrape(.url[i], base_wait = base_wait, user_agent = user_agent, verbose = verbose))
     if ((inherits(.out[[i]], "try-error") ||
       is.na(.out[[i]])) & i > 1) {
       .i <- i - 1L
@@ -69,7 +69,7 @@ scrape_scholar <- function(...) {
 #' @export
 #' @import curl rvest xml2 httr
 NULL
-scrape <- function(url,
+scrape <- function(url, base_wait = 10,
                    user_agent = NULL,
                    verbose = FALSE) {
   if (is.null(user_agent)) {
@@ -118,7 +118,7 @@ scrape <- function(url,
     .out <- parse_page(my_page)
   }
 
-  .pause(as.numeric(t1 - t0))
+  .pause(as.numeric(t1 - t0), base_wait)
 
   on.exit(closeAllConnections())
   return(.out)
@@ -466,9 +466,9 @@ parsing_helper <- function(.vec) {
 #' @title Pause Helper
 #' @details Function that randomly pauses after scraping a web page to make the bot seem 'human'.
 #'  to increase scraping speed, lower sampling time.
-.pause <- function(x) {
+.pause <- function(x, .base_wait) {
   .wait <- sample(seq(1, 2, .25), 1) * (1 / (1 / 2.5))
-  .wait <- 10 * (.wait * x)
+  .wait <- .base_wait * (.wait * x)
   message(sprintf("waiting for %.3f seconds...to prevent being blocked", .wait))
 
   Sys.sleep(.wait) # pause to let connection work
