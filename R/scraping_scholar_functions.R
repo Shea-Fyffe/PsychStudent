@@ -183,6 +183,11 @@ build_search <- function(...) {
     .cites <- .search[["article"]]
     .search[["article"]] <- NULL
   }
+  if ("title" %in% names(.search)) {
+    .title <- TRUE
+  } else {
+    .title <- FALSE
+  }
 
   if (exists(".cites")) {
     .base <- .get_base(.cites)
@@ -197,8 +202,12 @@ build_search <- function(...) {
     .search <- unlist(.search)
   }
   
-  .search <- sapply(.search, utils::URLencode)
+  if (.title) {
+    .search <- c("allintitle:", .search)
+  }
 
+  .search <- vapply(.search, FUN = utils::URLencode, FUN.VALUE = character(1),
+                    reserved = TRUE)
   .search <- paste(.search, collapse = "+")
   
   if (nchar(.search) > 255L) {
