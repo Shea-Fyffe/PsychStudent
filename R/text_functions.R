@@ -13,7 +13,7 @@
 #' }
 #' @import pdftools readr
 #' @export
-get_pdf_text <- function(path = getwd(), clean = TRUE, ...) {
+get_pdf_text <- function(path, clean = TRUE, ...) {
   stopifnot({
     is.character(path)
     is.logical(clean)
