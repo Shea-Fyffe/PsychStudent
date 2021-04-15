@@ -194,7 +194,6 @@ clean_text <-
     if (typeof(x) != "character") {
       stop("Please define x as a character")
     }
-
     if (any(grepl(
       "I_WAS_NOT_ASCII",
       iconv(x, "latin1", "ASCII",
@@ -250,6 +249,8 @@ clean_text <-
       x[grep("^\\s*$", x)] <- "NA"
     }
 
+    x <- gsub("\r?\n|\r", " ", x) 
+    
     if (rm_whitespace) {
       x <- gsub("\\s+", " ", x)
       x <- gsub("^\\s+|\\s+$", "", x)
@@ -283,13 +284,13 @@ extract_text_between <-
 #' @param pdf_path file path to article as a pdf
 #' @import tabulizer
 #' @export
-parse_pdf <- function(pdf_path) {
+parse_pdf <- function(pdf_path, clean_text = FALSE, ...) {
   if (!file.exists(pdf_path)) {
     stop("File path invalid")
   }
   x <- tryCatch(
     {
-      tabulizer::extract_text(pdf_path, encoding = "UTF-8")
+      tabulizer::extract_text(pdf_path, ...)
     },
     warning = function(w) {
       print(paste("warning:", w))
@@ -301,8 +302,10 @@ parse_pdf <- function(pdf_path) {
   if (any(grepl("\r\n", x))) {
     x <- unlist(strsplit(x, "\r\n"))
   }
-  x <- clean_text(x)
-  x <- x[x != ""]
+  if (clean_text) {
+    x <- clean_text(x)
+    x <- x[x != ""]
+  }
   if (length(x) == 0L) {
     return()
   } else {
@@ -317,27 +320,25 @@ parse_pdf <- function(pdf_path) {
 #' @param ... Additional arguments to be passed to [qdap::freq_terms]
 #' @return
 #' @export
-find_top_words <- function(x,
-                           stopwords = TRUE,
+find_top_words <- function(x, num_top_words = 20, at_least = 1, 
+                           ignore.case = TRUE, stopwords = TRUE,
                            stem = FALSE,
                            ...) {
+  if (ignore.case) x <- tolower(x)
+  .args <- list(text.var = x,
+                top = num_top_words,
+                at.least = at_least, ...)
+  
   if (stopwords) {
-    x <- .rm_stopwords(x)
+    .args[["stopwords"]] <- qdapDictionaries::Top200Words
   }
+  
   if (stem) {
-    x <- textstem::stem_words(x, "en")
+    .args[["text.var"]] <- textstem::stem_words(x, "en")
   }
-  if (length(list(...)) != 0L) {
-    x <- qdap::freq_terms(text.var = x, ...)
-  } else {
-    x <-
-      qdap::freq_terms(
-        text.var = x,
-        20,
-        at.least = 3,
-        stopwords = qdapDictionaries::Top200Words
-      )
-  }
+  
+  x <- do.call(qdap::freq_terms, .args)
+    
   return(x)
 }
 #' @title Attempt to calculate number of english words in a string
@@ -498,13 +499,16 @@ tokenize_docs <-
     doc_id <- seq_along(x)
     if (lower_case) {
       x <- tolower(x)
-      sep <- tolower(sep)
+       if (!is.null(sep)) {
+        sep <- tolower(sep)
+       }
     }
     if (is.null(sep)) {
       .x <- stringi::stri_split_boundaries(x,
         type = "word",
         skip_word_none = strip
       )
+      return(.x)
     } 
     if (fixed) {
       .x <-
@@ -556,3 +560,101 @@ normalize_sentences <-
     }
     return(txt)
   }
+
+#' Title
+#'
+#' @param x Required. Character vector of words, sentences, or documents to code.
+#' @param codes Required. A character vector, named list, or 2-column data.frame of themes and their
+#'     associated codes see Details.
+#' @param partial Optional. Look for partial strings when matching \code{code_book} codes
+#'     in \code{x}? \code{FALSE} by default
+#' @param ignore.case Optional. Ignore word case when matching \code{code_book} codes
+#'     in \code{x}? \code{TRUE} by default
+#' @param normalize_count Optional. Calculate indices evaluated by \code{thresh} as a proportion
+#'     by dividing by the number of words in document? \code{TRUE} by default.
+#'
+#' @return
+#' @export
+#'
+#' @examples
+code_documents <- function(x, codes, partial = FALSE, ignore.case = TRUE,
+                                  normalize_count = TRUE) {
+  stopifnot( exprs = {
+    is.character(x)
+    vapply(c(partial, ignore.case, normalize_count), is.logical, FUN.VALUE = logical(1))
+  })
+  .validate_codebook <- function(.code_book) {
+    if(is.character(.code_book)) return(list(.code_book))
+    if (inherits(.code_book, "data.frame")) {
+      if (all(is.element(c("code", "theme"), names(.code_book)))) {
+        .unique_check <- duplicated(.code_book$code)
+        .code_book <- split(.code_book$code, .code_book$theme)
+      } else {
+        stop('codebook must be a named list of words or
+      a data.frame with the names "code" and "theme" (see vpa_codebook for example)')
+      }
+    } else if (inherits(.code_book, "list")) {
+      if (is.null(names(.code_book))) {
+        stop('codebook must be a named list of words or
+      a data.frame with the names "code" and "theme" (see vpa_codebook for example)')
+      }
+      .unique_check <- duplicated(unlist(.code_book))
+      .list_val <- vapply(.code_book, is.character, FUN.VALUE = logical(1))
+      if (!all(.list_val)) {
+        stop("code book components must be character vectors")
+      }
+    } else {
+      stop("code book must be a list or data frame")
+    }
+    if (any(.unique_check)) {
+      stop("some codes duplicated across themes. Please remove duplicates and try again")
+    }
+    
+    return(.code_book)
+  }
+  codes <- .validate_codebook(codes)
+  .codes <- lapply(codes, function(.words) {
+    if (partial) {
+      if (any(nchar(.words) < 4)) {
+        warning("Some code words have less than 4 letters, which may lead to misclassification.
+                It's suggested you rerun function with partial = FALSE")
+      }
+      .words <- paste0(.words, ".*?")
+    }
+    .words <- paste0(.words, collapse = "|")
+    .words <- paste0("(?<!\\p{L})(", .words, ")(?!\\p{L})")
+    .words <- stringi::stri_count_regex(x, .words,
+                                        opts_regex = list(case_insensitive = ignore.case))
+  })
+  if (is.null(names(codes))) {
+    names(.codes) <- paste0("theme", seq(length(.codes)))
+  } else {
+    names(.codes) <- names(codes)
+  }
+  .codes <- as.data.frame(.codes)
+  
+  if (normalize_count) {
+    .codes <- sweep(.codes, MARGIN = 1,
+                    STATS = count_string_words(x), FUN = "/")
+  }
+  if(ncol(.codes) == 1L) .codes <- as.numeric(.codes)
+  return(.codes)
+}
+#' todo(shea)
+# identify_citations <- function(x, type = c("in-text", "parenthetical", "references")) {
+#    .res <- vector("list", 2)
+#    .xp <- "(?<=[A-Z]\\.)([A-Z]\\.)(?!\\s[A-z])"
+#    .x <- gsub(.xp, "\\1 \\2\\3", x, perl = TRUE)
+#    .mp <- "(?<=^([A-Z])|, ([A-Z])).*(?= [(]([0-9]{4})[),;])"
+#    if(type == "references") {
+#      .fp <- "(([A-z]+,)|(& [A-z]+,))(?=(\\s[A-Z]\\.)+)"
+#      .fp <- stringr::str_extract_all(.x, .fp)
+#      .yr <- "(?<=\\s[A-Z]\\.\\s?[(])[0-9]+"
+#      .yr <- stringr::str_extract_all(.x, .yr)
+#      return(list(.fp, .yr)) 
+#    } 
+#      #(?<!\s[a-z])[^\r\n\t]+(?= [(]([0-9]{4})([),;]|$))
+#    #maybe?
+#    return(stringr::str_extract_all(.x, .mp))
+# 
+# }
