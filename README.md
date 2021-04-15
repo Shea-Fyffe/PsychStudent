@@ -1,4 +1,4 @@
-# Get It Shea Get It
+# Psych(ology) Student
 
 **Authors** Shea Fyffe et al
 
