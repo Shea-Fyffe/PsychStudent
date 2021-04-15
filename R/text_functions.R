@@ -637,7 +637,7 @@ code_documents <- function(x, codes, partial = FALSE, ignore.case = TRUE,
     .codes <- sweep(.codes, MARGIN = 1,
                     STATS = count_string_words(x), FUN = "/")
   }
-  if(ncol(.codes) == 1L) .codes <- as.numeric(.codes)
+  if(ncol(.codes) == 1L) .codes <- .codes[[1]]
   return(.codes)
 }
 #' todo(shea)
