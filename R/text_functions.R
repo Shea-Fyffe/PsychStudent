@@ -13,35 +13,85 @@
 #' }
 #' @import pdftools readr
 #' @export
-get_pdf_text <- function(path, clean = TRUE, ...) {
+get_pdf_text <- function(pdf_path, clean = TRUE, ...) {
   stopifnot({
-    is.character(path)
+    is.character(pdf_path)
     is.logical(clean)
   })
-  if(!grepl("\\.pdf$", path)) {
-  .path <-
+  if (!all(grepl("\\.pdf$", pdf_path))) {
+  pdf_path <-
     tryCatch(
-      list.files(path, pattern = "\\.pdf$"),
+      list.files(pdf_path, pattern = "\\.pdf$"),
       error = function(err) {
         NA
       }
     )
-  if (!length(.path) || is.na(.path)) {
+    if (!length(pdf_path) || is.na(pdf_path)) {
     stop(sprintf("No valid PDF files found in %s", dir))
-   }
-  .fuzzy <- list(...)
-  if (!!length(.fuzzy)) {
-    .fuzzy <- paste(.fuzzy, collapse = "|")
-    if (any(grepl(.fuzzy, x = .path, ignore.case = TRUE))) {
-      .path <- .path[grepl(.fuzzy, x = .path, ignore.case = TRUE)]
     }
-   }
+    .fuzzy <- list(...)
+    if (!!length(.fuzzy)) {
+    .fuzzy <- paste(.fuzzy, collapse = "|")
+      if (any(grepl(.fuzzy, x = pdf_path, ignore.case = TRUE))) {
+        pdf_path <- .path[grepl(.fuzzy, x = pdf_path, ignore.case = TRUE)]
+      }
+    }
   }
-  .pdfs <- lapply(.path, pdftools::pdf_text)
+  .pdfs <- lapply(pdf_path, pdftools::pdf_text)
   if (clean) {
-    .pdfs <- lapply(.pdfs, clean_pdf)
+    .pdfs <- lapply(.pdfs, clean_text)
   }
   return(.pdfs)
+}
+
+get_pdf_headings <- function(pdf_path, size = 10, skip = NULL, collapse = TRUE, verbose = FALSE, total_lines = 700,
+                             ...) {
+  stopifnot({
+    is.character(pdf_path)
+    is.numeric(size)
+    is.logical(collapse)
+    is.logical(verbose)
+  })
+  .pdf <- pdftools::pdf_data(pdf_path, ...)
+  if (verbose) {
+    return(.pdf)
+  }
+  if (!is.null(skip)) {
+    .pdf <- .pdf[-skip]
+  }
+  .hdrs <- list()
+  for (i in seq_along(.pdf)) {
+    .transp <- mean(.pdf[[i]]$height >= .pdf[[i]]$width) > .75
+    .indx <- any(.pdf[[i]]$height == size)
+    if (!.transp && .indx) {
+      .hdrs[[i]] <- .pdf[[i]][.pdf[[i]]$height == size,]
+      .hdrs[[i]]$y <- .hdrs[[i]]$y + i*total_lines
+    } else {
+      .hdrs[[i]] <- NA
+    }
+  }
+  if (all(is.na(unlist(.hdrs)))) {
+    return(logical(0))
+  }
+  if (collapse) {
+    .hdrs <- do.call(rbind, 
+                     .hdrs[vapply(.hdrs, function(x) {
+                       inherits(x, c("list","data.frame"))
+                       }, FUN.VALUE = logical(1))])
+    .add <- which(diff(.hdrs$y) == 1)
+    if (length(.add) != 0L) {
+      .hdrs$y[.add + 1] <- .hdrs$y[.add]
+    }
+    .hdrs <- split(.hdrs, .hdrs$y)
+    .nm <- names(.hdrs)
+    .hdrs <- vapply(.hdrs, function(x) {
+      .txt <- x$text[grepl("^[A-z]", x$text, perl = TRUE)]
+      .x <- paste0(.txt, collapse = " ")
+    }, FUN.VALUE = character(1))
+    .hdrs <- data.frame(row = .nm, section = seq_along(.hdrs), header = .hdrs)
+    .hdrs <- .hdrs[.hdrs$header != "",]
+  }
+  return(.hdrs)
 }
 #' @title Identify synonyms using wordnet
 #' @author Shea Fyffe, \email{shea.fyffe@@gmail.com}

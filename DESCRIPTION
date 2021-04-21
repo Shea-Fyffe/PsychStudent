@@ -1,0 +1,16 @@
+Package: PsychStudent
+Title: What the Package Does (One Line, Title Case)
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Shea",
+           family = "Fyffe",
+           role = c("aut", "cre"),
+           email = "shea.fyffe@gmail.com",
+           comment = c(ORCID = "https://orcid.org/0000-0003-0312-7915"))
+Description: What the package does (one paragraph).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Language: es
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
