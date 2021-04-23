@@ -74,7 +74,7 @@ get_pdf_headings <- function(pdf_path, size = 10, skip = NULL, collapse = TRUE, 
     return(logical(0))
   }
   if (collapse) {
-    .hdrs <- do.call(rbind, 
+    .hdrs <- do.call(rbind,
                      .hdrs[vapply(.hdrs, function(x) {
                        inherits(x, c("list","data.frame"))
                        }, FUN.VALUE = logical(1))])
@@ -139,8 +139,8 @@ count_common_words <-
            stem = FALSE) {
     stopifnot(is.character(x), is.character(y))
     if (stopwords) {
-      x <- .rm_stopwords(x)
-      y <- .rm_stopwords(y)
+      x <- rm_stopwords(x)
+      y <- rm_stopwords(y)
     }
     if (stem) {
       x <- textstem::stem_words(x, "en")
@@ -299,8 +299,8 @@ clean_text <-
       x[grep("^\\s*$", x)] <- "NA"
     }
 
-    x <- gsub("\r?\n|\r", " ", x) 
-    
+    x <- gsub("\r?\n|\r", " ", x)
+
     if (rm_whitespace) {
       x <- gsub("\\s+", " ", x)
       x <- gsub("^\\s+|\\s+$", "", x)
@@ -370,7 +370,7 @@ parse_pdf <- function(pdf_path, clean_text = FALSE, ...) {
 #' @param ... Additional arguments to be passed to [qdap::freq_terms]
 #' @return
 #' @export
-find_top_words <- function(x, num_top_words = 20, at_least = 1, 
+find_top_words <- function(x, num_top_words = 20, at_least = 1,
                            ignore.case = TRUE, stopwords = TRUE,
                            stem = FALSE,
                            ...) {
@@ -378,17 +378,17 @@ find_top_words <- function(x, num_top_words = 20, at_least = 1,
   .args <- list(text.var = x,
                 top = num_top_words,
                 at.least = at_least, ...)
-  
+
   if (stopwords) {
-    .args[["stopwords"]] <- qdapDictionaries::Top200Words
+    .args[["stopwords"]] <- get_stopwords()
   }
-  
+
   if (stem) {
     .args[["text.var"]] <- textstem::stem_words(x, "en")
   }
-  
+
   x <- do.call(qdap::freq_terms, .args)
-    
+
   return(x)
 }
 #' @title Attempt to calculate number of english words in a string
@@ -428,12 +428,25 @@ check_spelling <- function(x, return_misspell = TRUE, ...) {
   }
   return(x)
 }
+#' @title Get stopwords
+#' @param x Character. A vector of words from a text document.
+#' @seealso [tm::stopwords] [qdapDictionaries::]
+#' @export
+get_stopwords <- function(full = TRUE) {
+  .stop_words <- tm::stopwords("en")
+  if (full) {
+    .stop_words <- unique(
+      c(.stop_words, qdapDictionaries::Top200Words)
+    )
+  }
+  return(.stop_words)
+}
 #' @title Remove Stopwords from a string
 #' @param x Character. A vector of words from a text document.
 #' @seealso [tm::stopwords]
 #' @export
-.rm_stopwords <- function(x) {
-  sw <- paste(tm::stopwords("en"), collapse = "\\b|\\b")
+rm_stopwords <- function(x, full = TRUE) {
+  sw <- paste(get_stopwords(full), collapse = "\\b|\\b")
   x <- gsub(sw, "", x)
   x <- gsub("\\s+", " ", x)
   x <- gsub("^\\s+|\\s+$", "", x)
@@ -559,7 +572,7 @@ tokenize_docs <-
         skip_word_none = strip
       )
       return(.x)
-    } 
+    }
     if (fixed) {
       .x <-
         stringi::stri_split_fixed(x, pattern = sep, omit_empty = strip)
@@ -589,7 +602,7 @@ normalize_sentences <-
       warning("no sentence ending characters found")
       return(logical(0))
     } else {
-      txt <- gsub(paste0("(", .sent_str,")\\1+"), 
+      txt <- gsub(paste0("(", .sent_str,")\\1+"),
            "\\1", txt)
       txt <-
         gsub(paste0("(?<=", .sent_str, ")(?=[\\w{2,}])"), " ", txt, perl = T)
@@ -659,7 +672,7 @@ code_documents <- function(x, codes, partial = FALSE, ignore.case = TRUE,
     if (any(.unique_check)) {
       stop("some codes duplicated across themes. Please remove duplicates and try again")
     }
-    
+
     return(.code_book)
   }
   codes <- .validate_codebook(codes)
@@ -682,7 +695,7 @@ code_documents <- function(x, codes, partial = FALSE, ignore.case = TRUE,
     names(.codes) <- names(codes)
   }
   .codes <- as.data.frame(.codes)
-  
+
   if (normalize_count) {
     .codes <- sweep(.codes, MARGIN = 1,
                     STATS = count_string_words(x), FUN = "/")
@@ -701,10 +714,10 @@ code_documents <- function(x, codes, partial = FALSE, ignore.case = TRUE,
 #      .fp <- stringr::str_extract_all(.x, .fp)
 #      .yr <- "(?<=\\s[A-Z]\\.\\s?[(])[0-9]+"
 #      .yr <- stringr::str_extract_all(.x, .yr)
-#      return(list(.fp, .yr)) 
-#    } 
+#      return(list(.fp, .yr))
+#    }
 #      #(?<!\s[a-z])[^\r\n\t]+(?= [(]([0-9]{4})([),;]|$))
 #    #maybe?
 #    return(stringr::str_extract_all(.x, .mp))
-# 
+#
 # }
