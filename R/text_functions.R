@@ -329,6 +329,19 @@ extract_text_between <-
     }
     return(.x)
   }
+
+#' @title
+#'
+#' @param x
+#'
+#' @return
+#' @export
+#'
+#' @examples
+capitalize_first_letter <- function(x) {
+    .res <- paste0(toupper(substr(x, 1, 1)), substr(x, 2, nchar(x)))
+    return(.res)
+}
 #' @title Parse PDF article
 #' @author Shea Fyffe, \email{shea.fyffe@@gmail.com}
 #' @param pdf_path file path to article as a pdf
@@ -522,7 +535,7 @@ has_words <- function(...,
   }
   return(.out)
 }
-
+#' @title Find and Replace Words
 find_replace_words <-
   function(docs,
            find_wrds,
@@ -647,7 +660,7 @@ code_documents <- function(x, codes, partial = FALSE, ignore.case = TRUE,
     vapply(c(partial, ignore.case, normalize_count), is.logical, FUN.VALUE = logical(1))
   })
   .validate_codebook <- function(.code_book) {
-    if(is.character(.code_book)) return(list(.code_book))
+    if (is.character(.code_book)) return(list(.code_book))
     if (inherits(.code_book, "data.frame")) {
       if (all(is.element(c("code", "theme"), names(.code_book)))) {
         .unique_check <- duplicated(.code_book$code)
@@ -700,24 +713,27 @@ code_documents <- function(x, codes, partial = FALSE, ignore.case = TRUE,
     .codes <- sweep(.codes, MARGIN = 1,
                     STATS = count_string_words(x), FUN = "/")
   }
-  if(ncol(.codes) == 1L) .codes <- .codes[[1]]
+  if (ncol(.codes) == 1L) .codes <- .codes[[1]]
   return(.codes)
 }
-#' todo(shea)
-# identify_citations <- function(x, type = c("in-text", "parenthetical", "references")) {
-#    .res <- vector("list", 2)
-#    .xp <- "(?<=[A-Z]\\.)([A-Z]\\.)(?!\\s[A-z])"
-#    .x <- gsub(.xp, "\\1 \\2\\3", x, perl = TRUE)
-#    .mp <- "(?<=^([A-Z])|, ([A-Z])).*(?= [(]([0-9]{4})[),;])"
-#    if(type == "references") {
-#      .fp <- "(([A-z]+,)|(& [A-z]+,))(?=(\\s[A-Z]\\.)+)"
-#      .fp <- stringr::str_extract_all(.x, .fp)
-#      .yr <- "(?<=\\s[A-Z]\\.\\s?[(])[0-9]+"
-#      .yr <- stringr::str_extract_all(.x, .yr)
-#      return(list(.fp, .yr))
-#    }
-#      #(?<!\s[a-z])[^\r\n\t]+(?= [(]([0-9]{4})([),;]|$))
-#    #maybe?
-#    return(stringr::str_extract_all(.x, .mp))
-#
-# }
+weight_string <- function(x, count = c("words", "letters", "punctuation"), by = NULL) {
+    count <- match.arg(count)
+    .count_pattern <- "\\w"
+    if(count == "words") {
+        .count_pattern <- paste0(.count_pattern, "+")
+    } else if (count == "punctuation") {
+        .count_pattern <- paste0("[^", .count_pattern, "]")
+    }
+    if(all(grepl("^[0-9]+$", x)) || is.numeric(x)) {
+        warning("x is only numeric, if it is a vector of counts please see the ave() function")
+    }
+    .x <- stringr::str_count(x, .count_pattern)
+    if (!is.null(by)) {
+        if(length(x) != length(by)) {
+            stop("by and x must be vectors of equal length")
+        }
+        .x_total <- ave(.x, by, FUN = \(x) sum(x, na.rm = T))
+        return(.x / .x_total)
+    }
+    .x
+}

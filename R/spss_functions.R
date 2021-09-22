@@ -35,23 +35,23 @@ get_spss <- function(dir = getwd(), var.pattern = NULL) {
 #' @import plyr
 #' @family SPSS
 recode_variables <- function(x, vars, old_values = NULL, new_values = NULL) {
-    if (!all(is.character(vars))) {
-        stop("vars should be of class character")
-    }
-    if (!all(vars %in% names(x))) {
-        stop(sprintf("%s are not all valid columns in x", vars))
-    }
-    .temp <- unique(unlist(x[, vars]))
-    if (!all(.temp %in% old_values)) {
-        stop(sprintf("Old values are missing: %s\n", setdiff(.temp, old_values)))
-    }
-    if (length(vars) > 1) {
-        x[, vars] <- apply(x[, vars], 2, function(x) plyr::mapvalues(x, from = old_values,
-            to = new_values))
-    } else {
-        x[, vars] <- plyr::mapvalues(x[, vars], from = old_values, to = new_values)
-    }
-    return(x)
+  if (!all(is.character(vars))) {
+    stop("vars should be of class character")
+  }
+  if (!all(vars %in% names(x))) {
+    stop(sprintf("%s are not all valid columns in x", vars))
+  }
+  .temp <- unique(unlist(x[, vars]))
+  if (!all(.temp %in% old_values)) {
+    stop(sprintf("Old values are missing: %s\n", setdiff(.temp, old_values)))
+  }
+  if (length(vars) > 1) {
+    x[, vars] <- apply(x[, vars], 2, function(x) plyr::mapvalues(x, from = old_values,
+                                                                 to = new_values))
+  } else {
+    x[, vars] <- plyr::mapvalues(x[, vars], from = old_values, to = new_values)
+  }
+  return(x)
 }
 
 
@@ -67,11 +67,11 @@ create_subscale <- function(x, FUNCT, pattern = NULL, ...) {
     stop("x must be a data.frame")
   }
   if(!is.null(pattern)) {
-      if(length(pattern) > 1) {
-        pattern <- paste0(pattern, collapse = "|")
-      }
-      x <- x[grep(pattern, names(x))]
+    if(length(pattern) > 1) {
+      pattern <- paste0(pattern, collapse = "|")
     }
+    x <- x[grep(pattern, names(x))]
+  }
   x <- apply(x, 1, FUN = FUNCT, ...)
   return(x)
 }
@@ -84,7 +84,7 @@ create_subscale <- function(x, FUNCT, pattern = NULL, ...) {
 #' @family SPSS
 #' @export
 get_vars <- function(x, pat, ...) {
-    .out <- names(x)[grepl(y, names(x), ...)]
-    return(.out)
+  .out <- names(x)[grepl(y, names(x), ...)]
+  return(.out)
 }
 
