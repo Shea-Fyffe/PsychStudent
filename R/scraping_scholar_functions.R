@@ -14,17 +14,17 @@
 #' @examples
 #' \dontrun{
 #' ## Searches for 'Engagement' AND 'organizational behavior' and limits return to 300
-#' res <- build_search("Engagement", "organizational behavior", max = 300)
+#' res <- scrape_scholar("Engagement", "organizational behavior", max = 300)
 #' }
 #'
 #' \dontrun{
 #' ## Searches for articles newer that 2010 with the words 'Job satistfaction' and limits return to 200 starts at 100
-#' res <- build_search("Job satisfaction", year = 2010, min = 100, max = 200)
+#' res <- scrape_schola("Job satisfaction", year = 2010, min = 100, max = 200)
 #' }
 #'
 #' \dontrun{
 #' ## Searches for articles newer that 2010 but earlier than 2015 with the words 'Job satistfaction' and limits return to 200 starts at 100
-#' res <- build_search("Job satisfaction", year = c(2010, 2015), min = 100, max = 200)
+#' res <- scrape_scholar("Job satisfaction", year = c(2010, 2015), min = 100, max = 200)
 #' }
 #'
 #' \dontrun{
