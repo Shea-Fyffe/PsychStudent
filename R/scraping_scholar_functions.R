@@ -1,5 +1,5 @@
 #' @title Scraping Google Scholar
-#' @author Shea Fyffe sfyffe@@gmail.com
+#' @author Shea Fyffe shea.fyffe@@gmail.com
 #' @description Wrapper function that collect data from a Google Scholar Search
 #' @seealso \link{https://scholar.google.com/robots.txt} For preventing scraper from being caught.
 #' @param ... String to be passed to Google Scholar search.
@@ -19,7 +19,7 @@
 #'
 #' \dontrun{
 #' ## Searches for articles newer that 2010 with the words 'Job satistfaction' and limits return to 200 starts at 100
-#' res <- scrape_schola("Job satisfaction", year = 2010, min = 100, max = 200)
+#' res <- scrape_scholar("Job satisfaction", year = 2010, min = 100, max = 200)
 #' }
 #'
 #' \dontrun{
@@ -30,11 +30,9 @@
 #' \dontrun{
 #' ## Searches for articles WITHIN article 10572144307387769361 newer that 2010 but earlier than 2015 with the words 'Job satistfaction'
 #' ## and limits return to 200 starts at 100
-#' res <- build_search("Job satisfaction", article = "10572144307387769361", year = c(2010, 2015), min = 100, max = 200)
+#' res <- scrape_scholar("Job satisfaction", article = "10572144307387769361", year = c(2010, 2015), min = 100, max = 200)
 #' }
 #' @export
-#' TODO(2021-10-07) clean up arguments passed to ...,
-#' make into generic function)
 scrape_scholar <- function(..., base_wait = 10, user_agent = NULL, verbose = FALSE) {
     .tmp <- paste(c(...))
     if (any(sapply(.tmp, function(x) {
