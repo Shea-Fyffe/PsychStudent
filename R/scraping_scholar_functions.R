@@ -328,14 +328,14 @@ build_search <- function(...) {
                 )
         } else {
             .add <-
-                sprintf("start=%d&as_ylo=%s&q=%s&btnG=", .max, .year, .search)
+                sprintf("start=%d&as_ylo=%d&q=%s&btnG=", .max, .year, .search)
         }
     } else if (.args[1] & !.args[2] & .args[3]) {
         .max <- seq(as.numeric(.min), as.numeric(.min) + 200, by = 20)
         if (length(.year) == 2L) {
             .add <-
                 sprintf(
-                    "start=%d&as_ylo=%s&as_yhi=%s&q=%s&btnG=",
+                    "start=%d&as_ylo=%d&as_yhi=%d&q=%s&btnG=",
                     .max,
                     .year[1],
                     .year[2],
@@ -344,7 +344,7 @@ build_search <- function(...) {
         } else {
             .add <-
                 sprintf(
-                    "start=%d&hl=en&as_vis=1?&as_sdt=0,47&as_ylo=%s&q=%s&btnG=",
+                    "start=%d&as_ylo=%d&q=%s&btnG=",
                     .max,
                     .year,
                     .search
@@ -505,15 +505,16 @@ parse_page <- function(.html) {
 #' @details Builds a base-url and determines if search should be global (i.e., across all articles)
 #'  or local (i.e., within article cited by)
 .get_base <- function(.cites = NULL) {
+    # as_sdt=5%2C47&sciodt=0%2C47
     if (!is.null(.cites)) {
         .base <-
             sprintf(
-                "https://scholar.google.com/scholar?&hl=en&num=20&as_vis=1?&as_sdt=1,47&cites=%s&scipsc=1&",
+                "https://scholar.google.com/scholar?&hl=en&num=20&cites=%s&scipsc=1&",
                 .cites
             )
     } else {
         .base <-
-            "https://scholar.google.com/scholar?&hl=en&num=20&as_vis=1?&as_sdt=1,47&"
+            "https://scholar.google.com/scholar?&hl=en&num=20&"
     }
     return(.base)
 }
