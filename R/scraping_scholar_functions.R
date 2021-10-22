@@ -509,12 +509,12 @@ parse_page <- function(.html) {
     if (!is.null(.cites)) {
         .base <-
             sprintf(
-                "https://scholar.google.com/scholar?&hl=en&num=20&cites=%s&scipsc=1&",
+                "https://scholar.google.com/scholar?&hl=en&num=20&as_sdt=0&sciodt=0cites=%s&scipsc=1&",
                 .cites
             )
     } else {
         .base <-
-            "https://scholar.google.com/scholar?&hl=en&num=20&"
+            "https://scholar.google.com/scholar?&hl=en&num=20&as_sdt=0&sciodt=0&"
     }
     return(.base)
 }
