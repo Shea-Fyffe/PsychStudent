@@ -436,7 +436,7 @@ parse_page <- function(.html) {
 #' @details Helper function that extracts Author, Journal, and Year from a single node
 .sort_meta <- function(.vec) {
     `%||%` <- function(.x, .y) {
-        if(is.null(.x)||is.na(.x)||length(.x)==0L) {
+        if (is.null(.x) || is.na(.x) || length(.x)==0L) {
             .y
         } else {
             .x
@@ -452,7 +452,7 @@ parse_page <- function(.html) {
     })
     .res <- data.frame(.res, stringsAsFactors = FALSE)
     names(.res) <- .name_list
-    return(.res)
+    return(.res[.name_list])
 }
 #' @title Randomize User-Agent Helper
 #' @details Function that randomly selects user-agents to make the bot seem 'human'
