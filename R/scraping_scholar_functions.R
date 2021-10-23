@@ -2,13 +2,17 @@
 #' @author Shea Fyffe shea.fyffe@@gmail.com
 #' @description Wrapper function that collect data from a Google Scholar Search
 #' @seealso \link{https://scholar.google.com/robots.txt} For preventing scraper from being caught.
-#' @param ... String to be passed to Google Scholar search.
+#' @params ... String to be passed to Google Scholar search.
 #'  Use \code{min =} and \code{max = } to restirict number of articles returned.
 #'  Use \code{year = } as a single-element vector to pull articles newer than the given year.
 #'  Use \code{year = } as a double-element vector to pull articles between two dates.
 #'  \code{year[1]} sets signifies 'after date' and \code{year[2]} 'before date'.
 #'  Use \code{article =} to search within a particular article. *note* this should be the article
 #'  given by Google (e.g., usually a string of digits), define this as a character.
+#' @param base_wait Optional. (Numeric) of seconds to wait (attenuated) between each page crawl
+#' @param time_out Optional. (Numeric) of maximum seconds to wait for webserver to respond to scrape request
+#' @param user_agent Optional. (Character) of a user-agent string
+#' @param verbose Optional. (Logical) Return page structure instead of parsing? Good for debugging
 #' @details \code{max = } will default to 200 if note explicitly defined.
 #'  \code{article = } will use search terms within the article defined.
 #' @examples
@@ -33,7 +37,7 @@
 #' res <- scrape_scholar("Job satisfaction", article = "10572144307387769361", year = c(2010, 2015), min = 100, max = 200)
 #' }
 #' @export
-scrape_scholar <- function(..., base_wait = 10, user_agent = NULL, verbose = FALSE) {
+scrape_scholar <- function(..., base_wait = 10, user_agent = NULL, time_out = 5L verbose = FALSE) {
     .tmp <- paste(c(...))
     if (any(sapply(.tmp, function(x) {
         grepl("^https://", x)
@@ -50,12 +54,9 @@ scrape_scholar <- function(..., base_wait = 10, user_agent = NULL, verbose = FAL
     .mpr <- sample(seq(nrow(mproxy)), 1L)
     # set a random user_agent and a timeout
     .start_session <-
-        rvest::session(.url[[1L]], httr::user_agent(user_agent), httr::timeout(3L),
+        rvest::session(.url[[1L]], httr::user_agent(user_agent), httr::timeout(time_out),
                        httr::use_proxy(url = mproxy[.mpr, 1], port = mproxy[.mpr, 2])
         )
-    my_cookies_table <- httr::cookies(.start_session) # get the cookies as a table
-    .cookies <- my_cookies_table$value
-    names(.cookies) <- my_cookies_table$names
     # drop links if they are beyond results
     .url <- .url[.index_crawl(.start_session, .url)]
     .out <- list()
